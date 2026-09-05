@@ -398,15 +398,21 @@
   var centerHoldTimer = null;   // holds the pending timeout while OK is held on the Snellen screen
   var centerHoldFired = false;  // true once the hold threshold has actually triggered the mode toggle
   var CENTER_HOLD_MS = 600;
+  var menuArrowWasHeld = false; // true once auto-repeat has actually fired for the current Left/Right press on the menu
   function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
   function randomLetters(n){ var s=[]; for(var i=0;i<n;i++) s.push(rand(LETTERS)); return s.join(" "); }
   function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
   // Shared letter set used by both Snellen and Duochrome, so the two tests always
   // show the same letters and the same acuity-line size when you switch between them.
   function regenerateAcuityLetters(){
-    var s = [];
-    for(var i=0;i<6;i++) s.push(rand(LETTERS));
-    state.acuityLetters = s;
+    // Sample 6 letters without replacement (Fisher-Yates shuffle, then take the
+    // first 6) so no letter repeats within the same Snellen row / Duochrome pair.
+    var pool = LETTERS.slice();
+    for(var i=pool.length-1;i>0;i--){
+      var j=Math.floor(Math.random()*(i+1));
+      var tmp=pool[i]; pool[i]=pool[j]; pool[j]=tmp;
+    }
+    state.acuityLetters = pool.slice(0,6);
   }
 
   // ---------- Screen management ----------
@@ -490,8 +496,11 @@
     });
   }
   function menuKey(e){
-    if(e.keyCode === KEY.LEFT)  state.menuIndex = (state.menuIndex + TESTS.length - 1) % TESTS.length;
-    if(e.keyCode === KEY.RIGHT) state.menuIndex = (state.menuIndex + 1) % TESTS.length;
+    if(e.keyCode === KEY.LEFT || e.keyCode === KEY.RIGHT){
+      if(e.repeat) menuArrowWasHeld = true; // auto-repeat only fires once the remote has actually been held
+      if(e.keyCode === KEY.LEFT)  state.menuIndex = (state.menuIndex + TESTS.length - 1) % TESTS.length;
+      if(e.keyCode === KEY.RIGHT) state.menuIndex = (state.menuIndex + 1) % TESTS.length;
+    }
     if(e.keyCode === KEY.OK){ showScreen(TESTS[state.menuIndex].id); return; }
     renderMenu();
   }
@@ -712,7 +721,14 @@
   // moves one step and opens; a held press cycles further before opening on release.
   document.addEventListener("keyup", function(e){
     if(state.screen === "menu" && (e.keyCode === KEY.LEFT || e.keyCode === KEY.RIGHT)){
-      showScreen(TESTS[state.menuIndex].id);
+      // Only a genuine hold (auto-repeat actually fired) opens the highlighted
+      // test on release. A quick tap just steps the cursor one place and stays
+      // on the menu, so repeated quick presses let you browse freely -- Center
+      // (or a proper hold) is what actually opens something.
+      if(menuArrowWasHeld){
+        showScreen(TESTS[state.menuIndex].id);
+      }
+      menuArrowWasHeld = false;
     }
     // Snellen OK release: if the hold timer hadn't fired yet, this was a quick
     // tap -- cancel the pending hold and reshuffle letters instead (original
