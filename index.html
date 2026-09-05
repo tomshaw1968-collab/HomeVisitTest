@@ -133,7 +133,7 @@
   .duo-half{flex:1; display:flex; align-items:center; justify-content:center;}
   .duo-half.red{background:var(--red);}
   .duo-half.green{background:var(--green);}
-  .duo-letters{font-family:"Courier New",monospace; font-weight:800; letter-spacing:0.2em; color:#111; font-size:4vw;}
+  .duo-letters{font-family:"Courier New",monospace; font-weight:800; letter-spacing:0.25em; color:#111;}
 
   /* ---------- Spot target ---------- */
   .spot{border-radius:50%; background:var(--off-white); transition:width 150ms, height 150ms, background 150ms;}
@@ -232,7 +232,7 @@
   <section id="screen-snellen" class="screen" hidden>
     <p class="line-label" id="snellen-line-label">6/12</p>
     <div class="snellen-line" id="snellen-letters">N H C V</div>
-    <p class="legend">▲ ▼ line size &nbsp;·&nbsp; ◀ ▶ new letters &nbsp;·&nbsp; tap OK reshuffle, hold OK light/dark &nbsp;·&nbsp; PLAY menu</p>
+    <p class="legend">▲ ▼ line size &nbsp;·&nbsp; ◀ ▶ new letters &nbsp;·&nbsp; tap OK reshuffle, hold OK light/dark &nbsp;·&nbsp; REW/FF switch test &nbsp;·&nbsp; PLAY menu</p>
   </section>
 
   <!-- DUOCHROME -->
@@ -242,13 +242,13 @@
       <div class="duo-half red"><span class="duo-letters" id="duo-left">C D H</span></div>
       <div class="duo-half green"><span class="duo-letters" id="duo-right">R S O</span></div>
     </div>
-    <p class="legend">▲ ▼ line size &nbsp;·&nbsp; ◀ ▶ new letters &nbsp;·&nbsp; OK / PLAY menu</p>
+    <p class="legend">▲ ▼ line size &nbsp;·&nbsp; ◀ ▶ new letters &nbsp;·&nbsp; OK / PLAY menu &nbsp;·&nbsp; REW/FF switch test</p>
   </section>
 
   <!-- SPOT TARGET -->
   <section id="screen-spot" class="screen" hidden>
     <div class="spot" id="spot-dot" style="width:30px;height:30px;"></div>
-    <p class="legend">◀ ▶ colour &nbsp;·&nbsp; ▲ ▼ size &nbsp;·&nbsp; OK reposition &nbsp;·&nbsp; PLAY menu</p>
+    <p class="legend">◀ ▶ colour &nbsp;·&nbsp; ▲ ▼ size &nbsp;·&nbsp; OK reposition &nbsp;·&nbsp; REW/FF switch test &nbsp;·&nbsp; PLAY menu</p>
   </section>
 
   <!-- MUSCLE BALANCE (MADDOX) -->
@@ -258,21 +258,21 @@
       <div class="maddox-spot"></div>
       <div class="maddox-streak" id="maddox-streak"></div>
     </div>
-    <p class="legend">◀ ▶ ▲ ▼ move streak &nbsp;·&nbsp; OK recentre &nbsp;·&nbsp; PLAY menu</p>
+    <p class="legend">◀ ▶ ▲ ▼ move streak &nbsp;·&nbsp; OK recentre &nbsp;·&nbsp; REW/FF switch test &nbsp;·&nbsp; PLAY menu</p>
   </section>
 
   <!-- LANDOLT C -->
   <section id="screen-landolt" class="screen" hidden>
     <p class="line-label" id="landolt-line-label">6/12</p>
     <svg id="landolt-svg" width="200" height="200" viewBox="0 0 200 200"></svg>
-    <p class="legend">OK new position &nbsp;·&nbsp; ▲ ▼ size &nbsp;·&nbsp; PLAY menu</p>
+    <p class="legend">OK new position &nbsp;·&nbsp; ▲ ▼ size &nbsp;·&nbsp; REW/FF switch test &nbsp;·&nbsp; PLAY menu</p>
   </section>
 
   <!-- AMSLER GRID -->
   <section id="screen-amsler" class="screen" hidden>
     <p class="amsler-label" id="amsler-eye-label">Right Eye</p>
     <svg id="amsler-svg"></svg>
-    <p class="legend">Cover the other eye &nbsp;·&nbsp; look at the centre dot &nbsp;·&nbsp; patient reports any wavy, blurred or missing lines &nbsp;·&nbsp; ◀ ▶ switch eye &nbsp;·&nbsp; PLAY menu</p>
+    <p class="legend">Cover the other eye &nbsp;·&nbsp; look at the centre dot &nbsp;·&nbsp; patient reports any wavy, blurred or missing lines &nbsp;·&nbsp; ◀ ▶ switch eye &nbsp;·&nbsp; REW/FF switch test &nbsp;·&nbsp; PLAY menu</p>
   </section>
 
   <!-- TV GUIDE (Sky-EPG-style reading test) -->
@@ -353,7 +353,7 @@
         </div>
       </div>
     </div>
-    <p class="legend">A static reading test &nbsp;·&nbsp; no other function &nbsp;·&nbsp; PLAY menu</p>
+    <p class="legend">A static reading test &nbsp;·&nbsp; no other function &nbsp;·&nbsp; REW/FF switch test &nbsp;·&nbsp; PLAY menu</p>
   </section>
 
   </div>
@@ -699,7 +699,23 @@
   }
 
   // ---------- Global key router ----------
+  // Fast test-switching: from inside any of the 7 test screens, Rewind/Fast-Forward
+  // jump straight to the previous/next test in the same circular order the menu
+  // uses, without needing to go back to the menu first. Takes priority over each
+  // screen's own key handler since REW/FF are otherwise unused on every test screen.
+  function jumpToAdjacentTest(direction){
+    var i = TESTS.findIndex(function(t){ return t.id === state.screen; });
+    if(i === -1) return;
+    var next = (i + direction + TESTS.length) % TESTS.length;
+    state.menuIndex = next;
+    showScreen(TESTS[next].id);
+  }
   document.addEventListener("keydown", function(e){
+    var onTestScreen = TESTS.some(function(t){ return t.id === state.screen; });
+    if(onTestScreen && (e.keyCode === KEY.REW || e.keyCode === KEY.FF)){
+      jumpToAdjacentTest(e.keyCode === KEY.REW ? -1 : 1);
+      return;
+    }
     switch(state.screen){
       case "splash":    if(e.keyCode === KEY.OK) showScreen("cardfit"); break;
       case "cardfit":   cardFitKey(e); break;
