@@ -139,13 +139,6 @@
   .spot{border-radius:50%; background:var(--off-white); transition:width 150ms, height 150ms, background 150ms;}
   .spot.red{background:var(--red);}
 
-  /* ---------- Muscle balance (Maddox) ---------- */
-  .maddox-wrap{position:relative; width:60vw; height:50vh;}
-  .maddox-spot{position:absolute; top:50%; left:50%; width:10px; height:10px; border-radius:50%; background:var(--off-white); transform:translate(-50%,-50%);}
-  .maddox-streak{position:absolute; width:2px; height:34vh; background:var(--red); top:50%; left:50%; transform-origin:center;}
-  .maddox-readout{position:absolute; top:1.5vh; left:0; right:0; text-align:center; font-size:1.1vw; color:var(--muted);}
-  .maddox-readout b{color:var(--brass);}
-
   /* ---------- Landolt C ---------- */
 
   /* ---------- Amsler grid ---------- */
@@ -232,7 +225,7 @@
   <section id="screen-snellen" class="screen" hidden>
     <p class="line-label" id="snellen-line-label">6/12</p>
     <div class="snellen-line" id="snellen-letters">N H C V</div>
-    <p class="legend">▲ ▼ line size &nbsp;·&nbsp; ◀ ▶ new letters &nbsp;·&nbsp; tap OK reshuffle, hold OK light/dark &nbsp;·&nbsp; REW/FF switch test &nbsp;·&nbsp; PLAY menu</p>
+    <p class="legend">▲ ▼ line size &nbsp;·&nbsp; ◀▶ tap: new letters, hold: switch test &nbsp;·&nbsp; OK tap: reshuffle, hold: light/dark &nbsp;·&nbsp; PLAY menu</p>
   </section>
 
   <!-- DUOCHROME -->
@@ -242,37 +235,27 @@
       <div class="duo-half red"><span class="duo-letters" id="duo-left">C D H</span></div>
       <div class="duo-half green"><span class="duo-letters" id="duo-right">R S O</span></div>
     </div>
-    <p class="legend">▲ ▼ line size &nbsp;·&nbsp; ◀ ▶ new letters &nbsp;·&nbsp; OK / PLAY menu &nbsp;·&nbsp; REW/FF switch test</p>
+    <p class="legend">▲ ▼ line size &nbsp;·&nbsp; ◀▶ tap: new letters, hold: switch test &nbsp;·&nbsp; OK / PLAY menu</p>
   </section>
 
   <!-- SPOT TARGET -->
   <section id="screen-spot" class="screen" hidden>
     <div class="spot" id="spot-dot" style="width:30px;height:30px;"></div>
-    <p class="legend">◀ ▶ colour &nbsp;·&nbsp; ▲ ▼ size &nbsp;·&nbsp; OK reposition &nbsp;·&nbsp; REW/FF switch test &nbsp;·&nbsp; PLAY menu</p>
-  </section>
-
-  <!-- MUSCLE BALANCE (MADDOX) -->
-  <section id="screen-muscle" class="screen" hidden>
-    <div class="maddox-wrap">
-      <p class="maddox-readout">Streak offset: <b id="maddox-readout">0.0Δ H · 0.0Δ V</b></p>
-      <div class="maddox-spot"></div>
-      <div class="maddox-streak" id="maddox-streak"></div>
-    </div>
-    <p class="legend">◀ ▶ ▲ ▼ move streak &nbsp;·&nbsp; OK recentre &nbsp;·&nbsp; REW/FF switch test &nbsp;·&nbsp; PLAY menu</p>
+    <p class="legend">◀▶ tap: colour, hold: switch test &nbsp;·&nbsp; ▲ ▼ size &nbsp;·&nbsp; OK reposition &nbsp;·&nbsp; PLAY menu</p>
   </section>
 
   <!-- LANDOLT C -->
   <section id="screen-landolt" class="screen" hidden>
     <p class="line-label" id="landolt-line-label">6/12</p>
     <svg id="landolt-svg" width="200" height="200" viewBox="0 0 200 200"></svg>
-    <p class="legend">OK new position &nbsp;·&nbsp; ▲ ▼ size &nbsp;·&nbsp; REW/FF switch test &nbsp;·&nbsp; PLAY menu</p>
+    <p class="legend">OK new position &nbsp;·&nbsp; ▲ ▼ size &nbsp;·&nbsp; hold ◀▶ or REW/FF: switch test &nbsp;·&nbsp; PLAY menu</p>
   </section>
 
   <!-- AMSLER GRID -->
   <section id="screen-amsler" class="screen" hidden>
     <p class="amsler-label" id="amsler-eye-label">Right Eye</p>
     <svg id="amsler-svg"></svg>
-    <p class="legend">Cover the other eye &nbsp;·&nbsp; look at the centre dot &nbsp;·&nbsp; patient reports any wavy, blurred or missing lines &nbsp;·&nbsp; ◀ ▶ switch eye &nbsp;·&nbsp; REW/FF switch test &nbsp;·&nbsp; PLAY menu</p>
+    <p class="legend">Cover the other eye &nbsp;·&nbsp; look at the centre dot &nbsp;·&nbsp; patient reports any wavy, blurred or missing lines &nbsp;·&nbsp; ◀▶ tap: switch eye, hold: switch test &nbsp;·&nbsp; PLAY menu</p>
   </section>
 
   <!-- TV GUIDE (Sky-EPG-style reading test) -->
@@ -353,7 +336,7 @@
         </div>
       </div>
     </div>
-    <p class="legend">A static reading test &nbsp;·&nbsp; no other function &nbsp;·&nbsp; REW/FF switch test &nbsp;·&nbsp; PLAY menu</p>
+    <p class="legend">A static reading test &nbsp;·&nbsp; no other function &nbsp;·&nbsp; hold ◀▶ or REW/FF: switch test &nbsp;·&nbsp; PLAY menu</p>
   </section>
 
   </div>
@@ -371,7 +354,6 @@
     {id:"snellen", label:"Snellen"},
     {id:"duochrome", label:"Duochrome"},
     {id:"spot", label:"Spot Target"},
-    {id:"muscle", label:"Muscle Balance"},
     {id:"landolt", label:"Landolt C"},
     {id:"amsler", label:"Amsler Grid"},
     {id:"epg", label:"TV Guide"}
@@ -385,9 +367,8 @@
     menuIndex: 0,
     acuityLine: 3,                   // index into LINES, shared between Snellen and Duochrome
     acuityLetters: [],                // shared letter set, shown in full on Snellen, split across the two halves on Duochrome
-    snellenMode: "dark",              // "dark" (white on black, default) or "standard" (black on white) -- toggled by holding OK on the Snellen screen
+    snellenMode: "standard",          // "standard" (black on white, default) or "dark" (white on black) -- toggled by holding OK on the Snellen screen
     spotColor: "white", spotSize: 30,
-    maddoxDX: 0, maddoxDY: 0,        // px offset of streak from centre
     landoltLine: 3, landoltDir: 0,   // 0=up,90=right,180=down,270=left
     amslerEye: "right"
   };
@@ -416,7 +397,7 @@
   }
 
   // ---------- Screen management ----------
-  var screens = ["splash","cardfit","distance","menu","snellen","duochrome","spot","muscle","landolt","amsler","epg"];
+  var screens = ["splash","cardfit","distance","menu","snellen","duochrome","spot","landolt","amsler","epg"];
   function showScreen(id){
     screens.forEach(function(s){ $("screen-"+s).hidden = (s !== id); });
     state.screen = id;
@@ -426,7 +407,6 @@
     if(id === "snellen") renderSnellen();
     if(id === "duochrome") renderDuochrome();
     if(id === "spot") renderSpot();
-    if(id === "muscle") renderMuscle();
     if(id === "landolt") renderLandolt();
     if(id === "amsler") renderAmsler();
     if(id === "epg") { /* static content, nothing to render */ }
@@ -585,29 +565,6 @@
     renderSpot();
   }
 
-  // ---------- Muscle balance (Maddox) ----------
-  function renderMuscle(){
-    var streak = $("maddox-streak");
-    streak.style.transform = "translate(" + state.maddoxDX + "px," + state.maddoxDY + "px)";
-    // Prism dioptres: 1D = 1cm deviation per metre of distance.
-    var offMmX = state.maddoxDX * state.mmPerPxX;
-    var offMmY = state.maddoxDY * state.mmPerPxY;
-    var pdH = (offMmX/10) / state.distanceM;
-    var pdV = (offMmY/10) / state.distanceM;
-    $("maddox-readout").innerHTML = pdH.toFixed(1) + "&Delta; H &middot; " + pdV.toFixed(1) + "&Delta; V";
-  }
-  function muscleKey(e){
-    var fine = 3, coarse = 12;
-    var step = e.repeat ? coarse : fine;
-    if(e.keyCode === KEY.LEFT)  state.maddoxDX -= step;
-    if(e.keyCode === KEY.RIGHT) state.maddoxDX += step;
-    if(e.keyCode === KEY.UP)    state.maddoxDY -= step;
-    if(e.keyCode === KEY.DOWN)  state.maddoxDY += step;
-    if(e.keyCode === KEY.OK){ state.maddoxDX = 0; state.maddoxDY = 0; }
-    if(e.keyCode === KEY.PLAY){ showScreen("menu"); return; }
-    renderMuscle();
-  }
-
   // ---------- Landolt C ----------
   // Standard proportions: outer diameter : stroke width : gap width = 5 : 1 : 1
   function drawLandolt(diameterPx, gapDeg){
@@ -710,10 +667,19 @@
     state.menuIndex = next;
     showScreen(TESTS[next].id);
   }
+  var testArrowWasHeld = false; // true once auto-repeat has actually fired for the current Left/Right press on a test screen
   document.addEventListener("keydown", function(e){
     var onTestScreen = TESTS.some(function(t){ return t.id === state.screen; });
     if(onTestScreen && (e.keyCode === KEY.REW || e.keyCode === KEY.FF)){
       jumpToAdjacentTest(e.keyCode === KEY.REW ? -1 : 1);
+      return;
+    }
+    if(onTestScreen && (e.keyCode === KEY.LEFT || e.keyCode === KEY.RIGHT)){
+      // Defer entirely to keyup: a genuine hold (e.repeat fires) jumps to the
+      // adjacent test, same as Rewind/Fast-Forward; a quick tap instead runs
+      // whatever that screen's own Left/Right action normally is (reshuffle
+      // letters, toggle colour, etc) -- see the keyup listener below.
+      if(e.repeat) testArrowWasHeld = true;
       return;
     }
     switch(state.screen){
@@ -724,7 +690,6 @@
       case "snellen":   snellenKey(e); break;
       case "duochrome": duochromeKey(e); break;
       case "spot":      spotKey(e); break;
-      case "muscle":    muscleKey(e); break;
       case "landolt":   landoltKey(e); break;
       case "amsler":    amslerKey(e); break;
       case "epg":       epgKey(e); break;
@@ -757,6 +722,25 @@
         renderSnellen();
       }
       centerHoldFired = false;
+    }
+    // Left/Right on a test screen: resolve what keydown deferred. A genuine
+    // hold jumps to the adjacent test (same direction convention as Rewind/
+    // Fast-Forward: Left=previous, Right=next). A quick tap instead runs that
+    // screen's own normal Left/Right action, by invoking its key handler now.
+    var onTestScreen = TESTS.some(function(t){ return t.id === state.screen; });
+    if(onTestScreen && (e.keyCode === KEY.LEFT || e.keyCode === KEY.RIGHT)){
+      if(testArrowWasHeld){
+        jumpToAdjacentTest(e.keyCode === KEY.LEFT ? -1 : 1);
+      } else {
+        switch(state.screen){
+          case "snellen":   snellenKey(e); break;
+          case "duochrome": duochromeKey(e); break;
+          case "spot":      spotKey(e); break;
+          case "amsler":    amslerKey(e); break;
+          // landolt/epg: no Left/Right behaviour, nothing to run
+        }
+      }
+      testArrowWasHeld = false;
     }
   });
 
