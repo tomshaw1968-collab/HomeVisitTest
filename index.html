@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Jacqueline Meade Opticians — Home Visits</title>
+<style>
+  :root{
+    --navy-deep:#0E1B27;
+    --navy-mid:#16283A;
+    --navy-line:#24405A;
+    --brass:#C1985E;
+    --brass-dim:#8A7048;
+    --off-white:#F4F0E6;
+    --muted:#8496A6;
+    --red:#C0392B;
+    --green:#2E7D5B;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    background:var(--navy-deep);
+    color:var(--off-white);
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    overflow:hidden;
+  }
+  .app{position:relative; width:100vw; height:100vh;}
+
+  /* ---------- Persistent header / logo ---------- */
+  .app-header{
+    position:absolute; top:0; left:0; right:0;
+    height:9vh; min-height:64px;
+    display:flex; align-items:center; justify-content:flex-end;
+    padding:0 4vw;
+    z-index:10;
+    pointer-events:none;
+  }
+  .app-header .logo-plate{
+    display:flex; align-items:center;
+  }
+  .app-header img.logo{
+    height:auto; width:19vw; min-width:175px; max-width:270px;
+    display:block;
+    filter:invert(1); /* artwork is black on a transparent background -- inverting turns it white, alpha is untouched */
+  }
+  .app-header .logo-fallback{
+    display:none;
+    font-family:Georgia,"Times New Roman",serif;
+    font-weight:700; letter-spacing:0.02em;
+    font-size:1.05em; color:var(--off-white);
+    white-space:nowrap;
+  }
+  .app-header img.logo.broken{display:none;}
+  .app-header img.logo.broken + .logo-fallback{display:block;}
+
+  /* ---------- Shared screen frame ---------- */
+  .screen{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column;
+    text-align:center;
+  }
+  .screen[hidden]{display:none;}
+
+  .legend{
+    position:absolute; bottom:3vh; left:0; right:0;
+    text-align:center;
+    font-size:1vw; color:var(--muted); letter-spacing:0.04em;
+  }
+
+  /* ---------- Splash ---------- */
+  .watermark{
+    position:absolute; left:-3vw; bottom:-14vh;
+    font-family:Georgia,"Times New Roman",serif; font-weight:700;
+    font-size:64vh; line-height:1; color:var(--navy-mid);
+    opacity:0.55; user-select:none; pointer-events:none;
+  }
+  .splash-content{position:relative; z-index:2; animation:riseIn 900ms ease-out both;}
+  .eyebrow{margin:0 0 0.6em; font-size:1.15vw; letter-spacing:0.32em; text-transform:uppercase; color:var(--muted);}
+  h1{margin:0; font-family:Georgia,"Times New Roman",serif; font-weight:700; font-size:7.2vw; line-height:1.02; color:var(--off-white);}
+  .rule{width:120px; height:2px; margin:1.3em auto 1.1em; background:linear-gradient(90deg, transparent, var(--brass), transparent);}
+  .tagline{margin:0; font-size:1.7vw; color:var(--brass); letter-spacing:0.06em; text-transform:uppercase; font-weight:500;}
+  .prompt{margin:2.6em 0 0; font-size:1.1vw; color:var(--muted); animation:pulse 2.4s ease-in-out infinite;}
+  .ok-badge{display:inline-block; border:1.5px solid var(--brass-dim); color:var(--brass); border-radius:5px; padding:0.15em 0.6em; font-weight:700; margin:0 0.15em;}
+  @keyframes riseIn{from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:translateY(0);}}
+  @keyframes pulse{0%,100%{opacity:0.55;} 50%{opacity:1;}}
+
+  /* ---------- Calibration: card fit ---------- */
+  .cal-title{font-family:Georgia,serif; font-size:2vw; margin-bottom:0.3em;}
+  .cal-sub{color:var(--muted); font-size:1vw; margin-bottom:2.4em; max-width:44vw;}
+  .card-rect{
+    border:3px dotted var(--brass); border-radius:0;
+    background:rgba(193,152,94,0.05);
+  }
+  .card-readout{margin-top:1.6em; font-size:1vw; color:var(--muted);}
+  .card-readout b{color:var(--off-white);}
+
+  /* ---------- Distance ---------- */
+  .distance-value{font-family:Georgia,serif; font-size:6vw; color:var(--off-white);}
+  .distance-unit{font-size:1.6vw; color:var(--brass); letter-spacing:0.08em; text-transform:uppercase;}
+
+  /* ---------- Menu ---------- */
+  .menu-content h2{font-family:Georgia,serif; font-weight:700; font-size:2.4vw; margin:0 0 1em;}
+  .tiles{display:flex; flex-wrap:wrap; gap:1.2vw; justify-content:center; max-width:88vw;}
+  .tile{width:10vw; min-width:130px; padding:1.4vw 0.8vw; background:var(--navy-mid); border:1.5px solid var(--navy-line); border-radius:8px; font-size:0.95vw;}
+  .tile.active{border-color:var(--brass); box-shadow:0 0 0 2px rgba(193,152,94,0.25);}
+
+  /* ---------- Line-size labels (Snellen, Duochrome, Landolt C) -----------
+     Shared class so the calculated Snellen number is clearly readable from
+     across a room on all three tests that use size-scaled optotypes. */
+  .line-label{position:absolute; top:10vh; left:4vw; font-size:2.8vw; font-weight:700; color:var(--brass); letter-spacing:0.06em; z-index:3;}
+  .line-label.on-color{color:var(--off-white); background:rgba(14,27,39,0.72); padding:0.1em 0.5em; border-radius:6px;}
+
+  /* ---------- Snellen ---------- */
+  .snellen-line{font-family:"Courier New",monospace; font-weight:800; letter-spacing:0.25em; color:var(--off-white);}
+
+  /* Snellen light/dark mode toggle (hold OK on the Snellen screen).
+     "dark" (default) = white on black. "standard" = black on white, the
+     traditional printed-chart presentation. Only ever applied while the
+     Snellen screen itself is showing -- see applySnellenModeClass(). */
+  .app.snellen-dark #screen-snellen{background:#000000;}
+  .app.snellen-dark #screen-snellen .snellen-line{color:#FFFFFF;}
+  .app.snellen-dark #screen-snellen .line-label{color:#FFFFFF;}
+  .app.snellen-dark #screen-snellen .legend{color:#9fb3c8;}
+
+  .app.snellen-light #screen-snellen{background:#FFFFFF;}
+  .app.snellen-light #screen-snellen .snellen-line{color:#000000;}
+  .app.snellen-light #screen-snellen .line-label{color:#000000;}
+  .app.snellen-light #screen-snellen .legend{color:#555555;}
+  .app.snellen-light .app-header img.logo{filter:none;} /* revert to the original black artwork so it stays visible against the white Snellen background */
+
+  /* ---------- Duochrome ---------- */
+  .duo-wrap{position:absolute; inset:0; display:flex;}
+  .duo-half{flex:1; display:flex; align-items:center; justify-content:center;}
+  .duo-half.red{background:var(--red);}
+  .duo-half.green{background:var(--green);}
+  .duo-letters{font-family:"Courier New",monospace; font-weight:800; letter-spacing:0.2em; color:#111; font-size:4vw;}
+
+  /* ---------- Spot target ---------- */
+  .spot{border-radius:50%; background:var(--off-white); transition:width 150ms, height 150ms, background 150ms;}
+  .spot.red{background:var(--red);}
+
+  /* ---------- Muscle balance (Maddox) ---------- */
+  .maddox-wrap{position:relative; width:60vw; height:50vh;}
+  .maddox-spot{position:absolute; top:50%; left:50%; width:10px; height:10px; border-radius:50%; background:var(--off-white); transform:translate(-50%,-50%);}
+  .maddox-streak{position:absolute; width:2px; height:34vh; background:var(--red); top:50%; left:50%; transform-origin:center;}
+  .maddox-readout{position:absolute; top:1.5vh; left:0; right:0; text-align:center; font-size:1.1vw; color:var(--muted);}
+  .maddox-readout b{color:var(--brass);}
+
+  /* ---------- Landolt C ---------- */
+
+  /* ---------- Amsler grid ---------- */
+  .amsler-label{position:absolute; top:11vh; left:4vw; font-size:1vw; color:var(--brass); letter-spacing:0.08em;}
+  .amsler-line{stroke:var(--off-white); stroke-width:1.5;}
+  .amsler-dot{fill:var(--off-white);}
+
+  /* ---------- TV Guide (Sky-EPG-style reading test) ----------
+     Purely decorative/static -- a realistic dense on-screen guide layout
+     for practical reading assessment, not a Snellen-calibrated test. */
+  .epg-wrap{position:absolute; inset:0; display:flex; flex-direction:column; background:#0B1C33; color:#fff; text-align:left;}
+  .epg-header{display:flex; justify-content:space-between; align-items:center; padding:1.4vh 2vw; background:#0F2440; border-bottom:2px solid #1c3a5e; flex-shrink:0;}
+  .epg-header .epg-title{font-size:1.7vw; font-weight:700; letter-spacing:0.02em;}
+  .epg-header .epg-time{font-size:1.3vw; color:#9fb3c8;}
+  .epg-timebar{display:flex; padding:0.7vh 2vw 0.7vh 0; margin-left:18vw; border-bottom:1px solid #1c3a5e; font-size:1vw; color:#9fb3c8; flex-shrink:0;}
+  .epg-timebar span{flex:1;}
+  .epg-timebar span:first-child{flex:0.8;}
+  .epg-timebar span:last-child{flex:1.6;}
+  .epg-rows{flex:1; overflow:hidden; position:relative;}
+  .epg-row{display:flex; align-items:stretch; height:11vh; border-bottom:1px solid #16283a;}
+  .epg-row:nth-child(even){background:rgba(255,255,255,0.02);}
+  .epg-channel{width:18vw; display:flex; align-items:center; gap:0.8vw; padding:0 1.2vw; background:#122a4a; border-right:1px solid #1c3a5e; flex-shrink:0;}
+  .epg-chnum{background:#1c3a5e; color:#fff; font-size:0.95vw; font-weight:700; border-radius:4px; padding:0.25em 0.55em;}
+  .epg-chname{font-size:1.1vw; font-weight:600;}
+  .epg-slots{flex:1; display:flex;}
+  .epg-slot{border-right:1px solid #16283a; display:flex; align-items:center; padding:0 0.9vw; font-size:1vw; color:#e7edf3; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;}
+  .epg-slot.s1{flex:0.8;}
+  .epg-slot.s2{flex:1.1;}
+  .epg-slot.s3{flex:1.6;}
+  .epg-slot.now{background:rgba(234,179,8,0.16); border:2px solid #eab308; border-radius:4px; font-weight:700; color:#fff;}
+  .epg-nowline{position:absolute; top:0; bottom:0; left:calc(18vw + 8%); width:2px; background:#e02424; z-index:2; pointer-events:none;}
+
+  .demo-toggle{position:absolute; bottom:14px; left:14px; z-index:20; background:var(--navy-mid); color:var(--muted); border:1px solid var(--navy-line); border-radius:5px; padding:0.5em 0.9em; font-size:12px; cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="app-header">
+    <div class="logo-plate">
+      <img class="logo" alt="Jacqueline Meade Opticians" src="data:image/png;base64,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" onerror="this.classList.add('broken')">
+      <span class="logo-fallback">Jacqueline Meade Opticians</span>
+    </div>
+  </header>
+
+  <!-- SPLASH -->
+  <section id="screen-splash" class="screen">
+    <div class="watermark" aria-hidden="true">E</div>
+    <div class="splash-content">
+      <p class="eyebrow">Jacqueline Meade Opticians</p>
+      <h1>Home Visits</h1>
+      <div class="rule"></div>
+      <p class="tagline">Home Eye Test</p>
+      <p class="prompt">Press <span class="ok-badge">OK</span> to begin</p>
+    </div>
+  </section>
+
+  <!-- CALIBRATION: CARD FIT -->
+  <section id="screen-cardfit" class="screen" hidden>
+    <p class="cal-title">Calibrate Screen Size</p>
+    <p class="cal-sub">Hold a standard credit or debit card up to the screen. Use ◀ ▶ to adjust the width and ▲ ▼ to adjust the height until the card fits neatly just inside the dotted rectangle, then press OK.</p>
+    <div id="card-rect" class="card-rect"></div>
+    <p class="card-readout">Width <b id="cf-w">—</b>mm target 85.6mm &nbsp;·&nbsp; Height <b id="cf-h">—</b>mm target 54.0mm</p>
+    <p class="legend">◀ ▶ width &nbsp;·&nbsp; ▲ ▼ height &nbsp;·&nbsp; OK confirm</p>
+  </section>
+
+  <!-- DISTANCE -->
+  <section id="screen-distance" class="screen" hidden>
+    <p class="cal-title">Set Test Distance</p>
+    <p class="cal-sub">Measure from the patient's chair to the screen.</p>
+    <div class="distance-value" id="dist-value">2.0</div>
+    <div class="distance-unit">metres</div>
+    <p class="legend">◀ ▶ adjust &nbsp;·&nbsp; OK confirm</p>
+  </section>
+
+  <!-- TEST MENU -->
+  <section id="screen-menu" class="screen" hidden>
+    <div class="menu-content">
+      <h2>Select a Test</h2>
+      <div class="tiles" id="menu-tiles"></div>
+    </div>
+    <p class="legend">◀ ▶ move &nbsp;·&nbsp; OK select</p>
+  </section>
+
+  <!-- SNELLEN -->
+  <section id="screen-snellen" class="screen" hidden>
+    <p class="line-label" id="snellen-line-label">6/12</p>
+    <div class="snellen-line" id="snellen-letters">N H C V</div>
+    <p class="legend">▲ ▼ line size &nbsp;·&nbsp; ◀ ▶ new letters &nbsp;·&nbsp; tap OK reshuffle, hold OK light/dark &nbsp;·&nbsp; PLAY menu</p>
+  </section>
+
+  <!-- DUOCHROME -->
+  <section id="screen-duochrome" class="screen" hidden>
+    <p class="line-label on-color" id="duo-line-label">6/12</p>
+    <div class="duo-wrap">
+      <div class="duo-half red"><span class="duo-letters" id="duo-left">C D H</span></div>
+      <div class="duo-half green"><span class="duo-letters" id="duo-right">R S O</span></div>
+    </div>
+    <p class="legend">▲ ▼ line size &nbsp;·&nbsp; ◀ ▶ new letters &nbsp;·&nbsp; OK / PLAY menu</p>
+  </section>
+
+  <!-- SPOT TARGET -->
+  <section id="screen-spot" class="screen" hidden>
+    <div class="spot" id="spot-dot" style="width:30px;height:30px;"></div>
+    <p class="legend">◀ ▶ colour &nbsp;·&nbsp; ▲ ▼ size &nbsp;·&nbsp; OK reposition &nbsp;·&nbsp; PLAY menu</p>
+  </section>
+
+  <!-- MUSCLE BALANCE (MADDOX) -->
+  <section id="screen-muscle" class="screen" hidden>
+    <div class="maddox-wrap">
+      <p class="maddox-readout">Streak offset: <b id="maddox-readout">0.0Δ H · 0.0Δ V</b></p>
+      <div class="maddox-spot"></div>
+      <div class="maddox-streak" id="maddox-streak"></div>
+    </div>
+    <p class="legend">◀ ▶ ▲ ▼ move streak &nbsp;·&nbsp; OK recentre &nbsp;·&nbsp; PLAY menu</p>
+  </section>
+
+  <!-- LANDOLT C -->
+  <section id="screen-landolt" class="screen" hidden>
+    <p class="line-label" id="landolt-line-label">6/12</p>
+    <svg id="landolt-svg" width="200" height="200" viewBox="0 0 200 200"></svg>
+    <p class="legend">OK new position &nbsp;·&nbsp; ▲ ▼ size &nbsp;·&nbsp; PLAY menu</p>
+  </section>
+
+  <!-- AMSLER GRID -->
+  <section id="screen-amsler" class="screen" hidden>
+    <p class="amsler-label" id="amsler-eye-label">Right Eye</p>
+    <svg id="amsler-svg"></svg>
+    <p class="legend">Cover the other eye &nbsp;·&nbsp; look at the centre dot &nbsp;·&nbsp; patient reports any wavy, blurred or missing lines &nbsp;·&nbsp; ◀ ▶ switch eye &nbsp;·&nbsp; PLAY menu</p>
+  </section>
+
+  <!-- TV GUIDE (Sky-EPG-style reading test) -->
+  <section id="screen-epg" class="screen" hidden>
+    <div class="epg-wrap">
+      <div class="epg-header">
+        <span class="epg-title">TV Guide</span>
+        <span class="epg-time">Tuesday 1 September &nbsp; 19:00</span>
+      </div>
+      <div class="epg-timebar">
+        <span>Now</span><span>19:00</span><span>19:30</span><span>20:15</span>
+      </div>
+      <div class="epg-rows">
+        <div class="epg-nowline"></div>
+        <div class="epg-row">
+          <div class="epg-channel"><span class="epg-chnum">101</span><span class="epg-chname">BBC One</span></div>
+          <div class="epg-slots">
+            <div class="epg-slot s1 now">News at Six</div>
+            <div class="epg-slot s2">Regional News and Weather</div>
+            <div class="epg-slot s3">EastEnders</div>
+          </div>
+        </div>
+        <div class="epg-row">
+          <div class="epg-channel"><span class="epg-chnum">102</span><span class="epg-chname">BBC Two</span></div>
+          <div class="epg-slots">
+            <div class="epg-slot s1 now">Antiques Roadshow</div>
+            <div class="epg-slot s2">Great British Menu</div>
+            <div class="epg-slot s3">Gardeners' World</div>
+          </div>
+        </div>
+        <div class="epg-row">
+          <div class="epg-channel"><span class="epg-chnum">103</span><span class="epg-chname">ITV1</span></div>
+          <div class="epg-slots">
+            <div class="epg-slot s1 now">The Chase</div>
+            <div class="epg-slot s2">ITV News and Weather</div>
+            <div class="epg-slot s3">Emmerdale</div>
+          </div>
+        </div>
+        <div class="epg-row">
+          <div class="epg-channel"><span class="epg-chnum">104</span><span class="epg-chname">Channel 4</span></div>
+          <div class="epg-slots">
+            <div class="epg-slot s1 now">Come Dine With Me</div>
+            <div class="epg-slot s2">Location, Location, Location</div>
+            <div class="epg-slot s3">24 Hours in A&amp;E</div>
+          </div>
+        </div>
+        <div class="epg-row">
+          <div class="epg-channel"><span class="epg-chnum">105</span><span class="epg-chname">Channel 5</span></div>
+          <div class="epg-slots">
+            <div class="epg-slot s1 now">5 News Tonight</div>
+            <div class="epg-slot s2">Blue Lights</div>
+            <div class="epg-slot s3">Great Canal Journeys</div>
+          </div>
+        </div>
+        <div class="epg-row">
+          <div class="epg-channel"><span class="epg-chnum">401</span><span class="epg-chname">Sky Sports Main Event</span></div>
+          <div class="epg-slots">
+            <div class="epg-slot s1 now">Live Football Tonight</div>
+            <div class="epg-slot s2">Live Football Tonight</div>
+            <div class="epg-slot s3">Match of the Night</div>
+          </div>
+        </div>
+        <div class="epg-row">
+          <div class="epg-channel"><span class="epg-chnum">108</span><span class="epg-chname">Sky Atlantic</span></div>
+          <div class="epg-slots">
+            <div class="epg-slot s1 now">Yellowstone</div>
+            <div class="epg-slot s2">The Last of Us</div>
+            <div class="epg-slot s3">House of the Dragon</div>
+          </div>
+        </div>
+        <div class="epg-row">
+          <div class="epg-channel"><span class="epg-chnum">501</span><span class="epg-chname">Sky News</span></div>
+          <div class="epg-slots">
+            <div class="epg-slot s1 now">Sky News Tonight</div>
+            <div class="epg-slot s2">Sky News at Ten</div>
+            <div class="epg-slot s3">The Papers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="legend">A static reading test &nbsp;·&nbsp; no other function &nbsp;·&nbsp; PLAY menu</p>
+  </section>
+
+  <button class="demo-toggle" onclick="alert('Remote keys only: Arrows, OK (Enter), Play/Pause, Rewind, Fast-Forward. This button is a browser-preview note only, it is not part of the deployed app.')">Preview note</button>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Remote keymap (confirmed on this device/webview) ----------
+  var KEY = { UP:38, DOWN:40, LEFT:37, RIGHT:39, OK:13, REW:227, PLAY:179, FF:228 };
+
+  var LETTERS = ["C","D","H","K","N","O","R","S","V","Z"];
+  var LINES = [60,36,24,18,12,9,6]; // Snellen denominators, largest to smallest
+  var TESTS = [
+    {id:"snellen", label:"Snellen"},
+    {id:"duochrome", label:"Duochrome"},
+    {id:"spot", label:"Spot Target"},
+    {id:"muscle", label:"Muscle Balance"},
+    {id:"landolt", label:"Landolt C"},
+    {id:"amsler", label:"Amsler Grid"},
+    {id:"epg", label:"TV Guide"}
+  ];
+
+  var state = {
+    screen: "splash",
+    cardW: 300, cardH: 180,          // px, card-fit rectangle
+    mmPerPxX: null, mmPerPxY: null,  // set on calibration confirm
+    distanceM: 2.0,
+    menuIndex: 0,
+    acuityLine: 3,                   // index into LINES, shared between Snellen and Duochrome
+    acuityLetters: [],                // shared letter set, shown in full on Snellen, split across the two halves on Duochrome
+    snellenMode: "dark",              // "dark" (white on black, default) or "standard" (black on white) -- toggled by holding OK on the Snellen screen
+    spotColor: "white", spotSize: 30,
+    maddoxDX: 0, maddoxDY: 0,        // px offset of streak from centre
+    landoltLine: 3, landoltDir: 0,   // 0=up,90=right,180=down,270=left
+    amslerEye: "right"
+  };
+
+  var CARD_MM_W = 85.60, CARD_MM_H = 53.98;
+
+  function $(id){ return document.getElementById(id); }
+  var centerHoldTimer = null;   // holds the pending timeout while OK is held on the Snellen screen
+  var centerHoldFired = false;  // true once the hold threshold has actually triggered the mode toggle
+  var CENTER_HOLD_MS = 600;
+  function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  function randomLetters(n){ var s=[]; for(var i=0;i<n;i++) s.push(rand(LETTERS)); return s.join(" "); }
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+  // Shared letter set used by both Snellen and Duochrome, so the two tests always
+  // show the same letters and the same acuity-line size when you switch between them.
+  function regenerateAcuityLetters(){
+    var s = [];
+    for(var i=0;i<6;i++) s.push(rand(LETTERS));
+    state.acuityLetters = s;
+  }
+
+  // ---------- Screen management ----------
+  var screens = ["splash","cardfit","distance","menu","snellen","duochrome","spot","muscle","landolt","amsler","epg"];
+  function showScreen(id){
+    screens.forEach(function(s){ $("screen-"+s).hidden = (s !== id); });
+    state.screen = id;
+    if(id === "cardfit") renderCardFit();
+    if(id === "distance") renderDistance();
+    if(id === "menu"){ state.menuIndex = 0; renderMenu(); } // always defaults to Snellen (index 0) when the menu is entered
+    if(id === "snellen") renderSnellen();
+    if(id === "duochrome") renderDuochrome();
+    if(id === "spot") renderSpot();
+    if(id === "muscle") renderMuscle();
+    if(id === "landolt") renderLandolt();
+    if(id === "amsler") renderAmsler();
+    if(id === "epg") { /* static content, nothing to render */ }
+    applySnellenModeClass();
+  }
+
+  // Toggles the light/dark theme override, and un-inverts the header logo to
+  // match, only while actually on the Snellen screen. Leaving Snellen always
+  // reverts the app to its normal dark theme regardless of the stored mode.
+  function applySnellenModeClass(){
+    var appEl = document.querySelector(".app");
+    appEl.classList.remove("snellen-light","snellen-dark");
+    if(state.screen === "snellen"){
+      appEl.classList.add(state.snellenMode === "standard" ? "snellen-light" : "snellen-dark");
+    }
+  }
+
+  // ---------- Card-fit calibration ----------
+  function renderCardFit(){
+    var el = $("card-rect");
+    el.style.width = state.cardW + "px";
+    el.style.height = state.cardH + "px";
+    // live readout uses a provisional guess (assume square pixels) purely so the
+    // tester has a rough mm figure to watch while adjusting; the real X/Y values
+    // are only derived once confirmed against the card's true fixed dimensions.
+    $("cf-w").textContent = (state.cardW / (state.cardW/CARD_MM_W)).toFixed(1);
+    $("cf-h").textContent = (state.cardH / (state.cardH/CARD_MM_H)).toFixed(1);
+  }
+  function cardFitKey(e){
+    var fine = 2, coarse = 8;
+    var step = e.repeat ? coarse : fine;
+    if(e.keyCode === KEY.LEFT)  state.cardW = clamp(state.cardW - step, 60, window.innerWidth*0.9);
+    if(e.keyCode === KEY.RIGHT) state.cardW = clamp(state.cardW + step, 60, window.innerWidth*0.9);
+    if(e.keyCode === KEY.UP)    state.cardH = clamp(state.cardH + step, 40, window.innerHeight*0.8);
+    if(e.keyCode === KEY.DOWN)  state.cardH = clamp(state.cardH - step, 40, window.innerHeight*0.8);
+    if(e.keyCode === KEY.OK){
+      state.mmPerPxX = CARD_MM_W / state.cardW;
+      state.mmPerPxY = CARD_MM_H / state.cardH;
+      showScreen("distance");
+      return;
+    }
+    renderCardFit();
+  }
+
+  // ---------- Distance ----------
+  function renderDistance(){
+    $("dist-value").textContent = state.distanceM.toFixed(1);
+  }
+  function distanceKey(e){
+    var fine = 0.1, coarse = 0.5;
+    var step = e.repeat ? coarse : fine;
+    if(e.keyCode === KEY.LEFT)  state.distanceM = clamp(state.distanceM - step, 0.5, 6.0);
+    if(e.keyCode === KEY.RIGHT) state.distanceM = clamp(state.distanceM + step, 0.5, 6.0);
+    if(e.keyCode === KEY.OK){ showScreen("menu"); return; }
+    renderDistance();
+  }
+
+  // ---------- Menu ----------
+  function renderMenu(){
+    var wrap = $("menu-tiles");
+    wrap.innerHTML = "";
+    TESTS.forEach(function(t, i){
+      var d = document.createElement("div");
+      d.className = "tile" + (i === state.menuIndex ? " active" : "");
+      d.textContent = t.label;
+      wrap.appendChild(d);
+    });
+  }
+  function menuKey(e){
+    if(e.keyCode === KEY.LEFT)  state.menuIndex = (state.menuIndex + TESTS.length - 1) % TESTS.length;
+    if(e.keyCode === KEY.RIGHT) state.menuIndex = (state.menuIndex + 1) % TESTS.length;
+    if(e.keyCode === KEY.OK){ showScreen(TESTS[state.menuIndex].id); return; }
+    renderMenu();
+  }
+
+  // ---------- Optotype sizing ----------
+  // Standard: a 6/6 letter subtends 5 arcmin at 6m -> 8.7mm tall at 6m.
+  // Scales linearly with both chosen line (denominator) and actual test distance.
+  function letterHeightMm(denominator, distanceM){
+    return 8.7 * (distanceM/6) * (denominator/6);
+  }
+  function letterHeightPx(denominator){
+    var mm = letterHeightMm(denominator, state.distanceM);
+    return mm / state.mmPerPxY;
+  }
+
+  // ---------- Snellen ----------
+  // Shares state.acuityLine (size) and state.acuityLetters with Duochrome, so
+  // switching between the two tests always shows the same line size and letters.
+  function renderSnellen(){
+    var denom = LINES[state.acuityLine];
+    $("snellen-line-label").textContent = "6/" + denom;
+    var px = letterHeightPx(denom);
+    var el = $("snellen-letters");
+    el.style.fontSize = px + "px";
+    el.textContent = state.acuityLetters.join(" ");
+  }
+  function snellenKey(e){
+    if(e.keyCode === KEY.UP)    { state.acuityLine = clamp(state.acuityLine - 1, 0, LINES.length-1); renderSnellen(); return; }
+    if(e.keyCode === KEY.DOWN)  { state.acuityLine = clamp(state.acuityLine + 1, 0, LINES.length-1); renderSnellen(); return; }
+    if(e.keyCode === KEY.LEFT || e.keyCode === KEY.RIGHT){ regenerateAcuityLetters(); renderSnellen(); return; }
+    if(e.keyCode === KEY.OK){
+      // Don't act yet -- start a hold timer on the initial press only (ignore
+      // auto-repeat keydowns while held). If it fires before release, that's
+      // the hold gesture (toggle light/dark). If released first, keyup below
+      // treats it as a quick tap (reshuffle letters), same as before.
+      if(!e.repeat && !centerHoldTimer){
+        centerHoldFired = false;
+        centerHoldTimer = setTimeout(function(){
+          centerHoldFired = true;
+          state.snellenMode = (state.snellenMode === "standard" ? "dark" : "standard");
+          applySnellenModeClass();
+          renderSnellen();
+        }, CENTER_HOLD_MS);
+      }
+      return;
+    }
+    if(e.keyCode === KEY.PLAY){ showScreen("menu"); return; }
+  }
+
+  // ---------- Duochrome ----------
+  // Same shared acuity line/letters as Snellen (see above) -- the first 3 shared
+  // letters show on the red half, the last 3 on the green half.
+  function renderDuochrome(){
+    var denom = LINES[state.acuityLine];
+    $("duo-line-label").textContent = "6/" + denom;
+    var px = letterHeightPx(denom);
+    $("duo-left").style.fontSize = px + "px";
+    $("duo-right").style.fontSize = px + "px";
+    $("duo-left").textContent = state.acuityLetters.slice(0,3).join(" ");
+    $("duo-right").textContent = state.acuityLetters.slice(3,6).join(" ");
+  }
+  function duochromeKey(e){
+    if(e.keyCode === KEY.UP)    state.acuityLine = clamp(state.acuityLine - 1, 0, LINES.length-1);
+    if(e.keyCode === KEY.DOWN)  state.acuityLine = clamp(state.acuityLine + 1, 0, LINES.length-1);
+    if(e.keyCode === KEY.LEFT || e.keyCode === KEY.RIGHT) regenerateAcuityLetters();
+    if(e.keyCode === KEY.OK || e.keyCode === KEY.PLAY){ showScreen("menu"); return; }
+    renderDuochrome();
+  }
+
+  // ---------- Spot target ----------
+  function renderSpot(){
+    var el = $("spot-dot");
+    el.style.width = state.spotSize + "px";
+    el.style.height = state.spotSize + "px";
+    el.className = "spot" + (state.spotColor === "red" ? " red" : "");
+  }
+  function spotKey(e){
+    if(e.keyCode === KEY.LEFT || e.keyCode === KEY.RIGHT) state.spotColor = (state.spotColor === "white" ? "red" : "white");
+    if(e.keyCode === KEY.UP)   state.spotSize = clamp(state.spotSize + 10, 10, 80);
+    if(e.keyCode === KEY.DOWN) state.spotSize = clamp(state.spotSize - 10, 10, 80);
+    if(e.keyCode === KEY.PLAY){ showScreen("menu"); return; }
+    renderSpot();
+  }
+
+  // ---------- Muscle balance (Maddox) ----------
+  function renderMuscle(){
+    var streak = $("maddox-streak");
+    streak.style.transform = "translate(" + state.maddoxDX + "px," + state.maddoxDY + "px)";
+    // Prism dioptres: 1D = 1cm deviation per metre of distance.
+    var offMmX = state.maddoxDX * state.mmPerPxX;
+    var offMmY = state.maddoxDY * state.mmPerPxY;
+    var pdH = (offMmX/10) / state.distanceM;
+    var pdV = (offMmY/10) / state.distanceM;
+    $("maddox-readout").innerHTML = pdH.toFixed(1) + "&Delta; H &middot; " + pdV.toFixed(1) + "&Delta; V";
+  }
+  function muscleKey(e){
+    var fine = 3, coarse = 12;
+    var step = e.repeat ? coarse : fine;
+    if(e.keyCode === KEY.LEFT)  state.maddoxDX -= step;
+    if(e.keyCode === KEY.RIGHT) state.maddoxDX += step;
+    if(e.keyCode === KEY.UP)    state.maddoxDY -= step;
+    if(e.keyCode === KEY.DOWN)  state.maddoxDY += step;
+    if(e.keyCode === KEY.OK){ state.maddoxDX = 0; state.maddoxDY = 0; }
+    if(e.keyCode === KEY.PLAY){ showScreen("menu"); return; }
+    renderMuscle();
+  }
+
+  // ---------- Landolt C ----------
+  // Standard proportions: outer diameter : stroke width : gap width = 5 : 1 : 1
+  function drawLandolt(diameterPx, gapDeg){
+    var r = diameterPx/2, stroke = diameterPx/5;
+    var cx = 100, cy = 100;
+    var svg = $("landolt-svg");
+    var gapWidthDeg = (stroke / (2*Math.PI*r)) * 360; // approx arc width matching stroke thickness
+    var startDeg = gapDeg + gapWidthDeg/2;
+    var endDeg = gapDeg - gapWidthDeg/2 + 360;
+    function pt(deg){
+      var rad = (deg-90) * Math.PI/180;
+      return [cx + r*Math.cos(rad), cy + r*Math.sin(rad)];
+    }
+    var p1 = pt(startDeg), p2 = pt(endDeg);
+    var largeArc = (endDeg - startDeg) > 180 ? 1 : 0;
+    var d = "M " + p1[0] + " " + p1[1] + " A " + r + " " + r + " 0 " + largeArc + " 1 " + p2[0] + " " + p2[1];
+    svg.innerHTML = '<path d="'+d+'" fill="none" stroke="#F4F0E6" stroke-width="'+stroke+'" />';
+  }
+  function renderLandolt(){
+    var denom = LINES[state.landoltLine];
+    $("landolt-line-label").textContent = "6/" + denom;
+    var mm = letterHeightMm(denom, state.distanceM); // ring diameter uses same formula as letter height
+    var px = mm / state.mmPerPxY;
+    px = clamp(px, 20, 400);
+    var svg = $("landolt-svg");
+    svg.setAttribute("width", 200); svg.setAttribute("height", 200);
+    drawLandolt(px, state.landoltDir);
+  }
+  function landoltKey(e){
+    if(e.keyCode === KEY.UP)    state.landoltLine = clamp(state.landoltLine - 1, 0, LINES.length-1);
+    if(e.keyCode === KEY.DOWN)  state.landoltLine = clamp(state.landoltLine + 1, 0, LINES.length-1);
+    if(e.keyCode === KEY.OK){
+      // Jump to a new random gap position, always different from the current one --
+      // no confirm step, this alone is the "next ring" action.
+      var others = [0,90,180,270].filter(function(d){ return d !== state.landoltDir; });
+      state.landoltDir = rand(others);
+    }
+    if(e.keyCode === KEY.PLAY){ showScreen("menu"); return; }
+    renderLandolt();
+  }
+
+  // ---------- Amsler grid ----------
+  // Standard grid: 10x10 squares, sized so the whole grid subtends ~20 degrees
+  // of visual field (+-10 degrees each side of the central fixation dot) at
+  // the calibrated test distance -- the same distance/calibration used by
+  // every other test, per the app's distance-only design (no separate near
+  // testing mode). Rendered as light lines on a dark field rather than the
+  // traditional black-on-white card; a dark-field presentation is a
+  // recognised higher-sensitivity variant, not just a style choice here.
+  function renderAmsler(){
+    $("amsler-eye-label").textContent = (state.amslerEye === "right" ? "Right Eye" : "Left Eye");
+    var halfAngleRad = 10 * Math.PI/180;
+    var distanceMm = state.distanceM * 1000;
+    var halfWidthMm = distanceMm * Math.tan(halfAngleRad);
+    var gridWidthMm = halfWidthMm * 2;
+    var gridWidthPx = gridWidthMm / state.mmPerPxX;
+    var gridHeightPx = gridWidthMm / state.mmPerPxY; // same physical size both axes, converted separately per calibrated axis
+    var maxW = window.innerWidth * 0.8, maxH = window.innerHeight * 0.7;
+    gridWidthPx = clamp(gridWidthPx, 100, maxW);
+    gridHeightPx = clamp(gridHeightPx, 100, maxH);
+
+    var svg = $("amsler-svg");
+    svg.setAttribute("width", gridWidthPx);
+    svg.setAttribute("height", gridHeightPx);
+    svg.setAttribute("viewBox", "0 0 " + gridWidthPx + " " + gridHeightPx);
+    var cells = 10, html = "";
+    for(var i=0;i<=cells;i++){
+      var x = (gridWidthPx/cells)*i;
+      html += '<line class="amsler-line" x1="'+x+'" y1="0" x2="'+x+'" y2="'+gridHeightPx+'" />';
+      var y = (gridHeightPx/cells)*i;
+      html += '<line class="amsler-line" x1="0" y1="'+y+'" x2="'+gridWidthPx+'" y2="'+y+'" />';
+    }
+    html += '<circle class="amsler-dot" cx="'+(gridWidthPx/2)+'" cy="'+(gridHeightPx/2)+'" r="'+Math.max(4, gridWidthPx*0.012)+'" />';
+    svg.innerHTML = html;
+  }
+  function amslerKey(e){
+    if(e.keyCode === KEY.LEFT || e.keyCode === KEY.RIGHT){
+      state.amslerEye = (state.amslerEye === "right" ? "left" : "right");
+      renderAmsler();
+    }
+    if(e.keyCode === KEY.PLAY){ showScreen("menu"); return; }
+  }
+
+  // ---------- TV Guide (Sky-EPG-style reading test) ----------
+  // Deliberately static and non-interactive -- a realistic dense guide layout
+  // for practical reading assessment. Play/Pause is the only functioning key.
+  function epgKey(e){
+    if(e.keyCode === KEY.PLAY){ showScreen("menu"); return; }
+  }
+
+  // ---------- Global key router ----------
+  document.addEventListener("keydown", function(e){
+    switch(state.screen){
+      case "splash":    if(e.keyCode === KEY.OK) showScreen("cardfit"); break;
+      case "cardfit":   cardFitKey(e); break;
+      case "distance":  distanceKey(e); break;
+      case "menu":      menuKey(e); break;
+      case "snellen":   snellenKey(e); break;
+      case "duochrome": duochromeKey(e); break;
+      case "spot":      spotKey(e); break;
+      case "muscle":    muscleKey(e); break;
+      case "landolt":   landoltKey(e); break;
+      case "amsler":    amslerKey(e); break;
+      case "epg":       epgKey(e); break;
+    }
+  });
+
+  // On the test menu, Left/Right cycle the highlighted test (wrapping like a circle,
+  // continuing to cycle for as long as the key is held via auto-repeat); releasing
+  // the key opens whichever test is highlighted at that moment. A quick tap therefore
+  // moves one step and opens; a held press cycles further before opening on release.
+  document.addEventListener("keyup", function(e){
+    if(state.screen === "menu" && (e.keyCode === KEY.LEFT || e.keyCode === KEY.RIGHT)){
+      showScreen(TESTS[state.menuIndex].id);
+    }
+    // Snellen OK release: if the hold timer hadn't fired yet, this was a quick
+    // tap -- cancel the pending hold and reshuffle letters instead (original
+    // OK behaviour). If the hold already fired, the mode toggle already
+    // happened, so do nothing further here.
+    if(state.screen === "snellen" && e.keyCode === KEY.OK){
+      if(centerHoldTimer){ clearTimeout(centerHoldTimer); centerHoldTimer = null; }
+      if(!centerHoldFired){
+        regenerateAcuityLetters();
+        renderSnellen();
+      }
+      centerHoldFired = false;
+    }
+  });
+
+  regenerateAcuityLetters();
+  showScreen("splash");
+})();
+</script>
+</body>
+</html>
